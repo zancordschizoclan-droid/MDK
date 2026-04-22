@@ -1,0 +1,275 @@
+import tkinter as tk
+from tkinter import ttk, messagebox, filedialog
+from ttkthemes import ThemedStyle
+from PIL import Image, ImageTk
+
+class ClinicInterface:
+    def __init__(self, master):
+        self.master = master
+        master.title("Интерфейс Поликлиники")
+        master.geometry("1000x700") # Увеличим размер окна для лучшего отображения
+
+        # --- Настройка стиля ---
+        self.style = ThemedStyle(master)
+        # Выберем приятную тему. "arc" или "adapta" - хорошие варианты.
+        # Попробуй разные, например: "winnative", "clam", "alt", "default", "classic", "vista", "xpnative"
+        self.style.set_theme("arc")
+
+        # Настраиваем цвета для основных элементов
+        self.style.configure("TFrame", background="#e0f7fa") # Светло-голубой фон
+        self.style.configure("TLabel", background="#e0f7fa", foreground="#00796b", font=("Arial", 12))
+        self.style.configure("TButton", background="#00796b", foreground="white", font=("Arial", 11, "bold"), padding=10)
+        self.style.map("TButton",
+                       background=[('active', '#009688')], # Более яркий голубой при наведении
+                       foreground=[('active', 'white')])
+        self.style.configure("TEntry", padding=8, font=("Arial", 11))
+        self.style.configure("TCombobox", padding=8, font=("Arial", 11))
+        self.style.configure("Treeview.Heading", font=("Arial", 12, "bold"), background="#00796b", foreground="white")
+        self.style.configure("Treeview", rowheight=30, background="#ffffff", foreground="#333333", fieldbackground="#ffffff")
+
+        # --- Загрузка логотипа ---
+        try:
+            # Предполагается, что у вас есть файл logo.png в той же папке
+            # Можете заменить на свой логотип или удалить этот блок, если лого нет
+            img = Image.open("logo.png")
+            img = img.resize((100, 100), Image.Resampling.LANCZOS) # Уменьшаем размер логотипа
+            self.logo_photo = ImageTk.PhotoImage(img)
+
+            logo_label = tk.Label(master, image=self.logo_photo, background="#e0f7fa")
+            logo_label.grid(row=0, column=0, padx=20, pady=15, sticky="nw")
+        except FileNotFoundError:
+            print("Файл logo.png не найден. Логотип не будет отображаться.")
+            logo_label = None
+
+        # --- Заголовок ---
+        title_label = ttk.Label(master, text="ЗАПИСЬ К СПЕЦИАЛИСТУ", font=("Arial", 24, "bold"), background="#e0f7fa", foreground="#00796b")
+        if logo_label:
+            title_label.grid(row=0, column=1, columnspan=2, pady=20, padx=20, sticky="n")
+        else:
+            title_label.grid(row=0, column=0, columnspan=3, pady=20, padx=20, sticky="n")
+
+
+        # --- Основной фрейм для формы записи ---
+        form_frame = ttk.Frame(master, padding="20", style="TFrame")
+        form_frame.grid(row=1, column=0, columnspan=3, padx=20, pady=20, sticky="nsew")
+
+        # --- Элементы формы ---
+        self.label_name = ttk.Label(form_frame, text="ФИО пациента:")
+        self.entry_name = ttk.Entry(form_frame, width=40)
+
+        self.label_specialty = ttk.Label(form_frame, text="Специальность:")
+        self.specialties = ["Терапевт", "Кардиолог", "Невролог", "Офтальмолог", "Стоматолог", "Хирург"]
+        self.combobox_specialty = ttk.Combobox(form_frame, values=self.specialties, state="readonly", width=37)
+        self.combobox_specialty.current(0) # Выбираем первый элемент по умолчанию
+
+        self.label_doctor = ttk.Label(form_frame, text="Врач:")
+        self.doctors = [] # Список врачей будет заполняться динамически
+        self.combobox_doctor = ttk.Combobox(form_frame, values=self.doctors, state="readonly", width=37)
+
+        self.label_date = ttk.Label(form_frame, text="Дата приема:")
+        self.entry_date = ttk.Entry(form_frame, width=40) # Пока просто поле для ввода даты
+
+        self.label_time = ttk.Label(form_frame, text="Время приема:")
+        self.entry_time = ttk.Entry(form_frame, width=40)
+
+        # Размещение элементов в сетке form_frame
+        self.label_name.grid(row=0, column=0, padx=10, pady=10, sticky="w")
+        self.entry_name.grid(row=0, column=1, padx=10, pady=10, sticky="we")
+
+        self.label_specialty.grid(row=1, column=0, padx=10, pady=10, sticky="w")
+        self.combobox_specialty.grid(row=1, column=1, padx=10, pady=10, sticky="we")
+        self.combobox_specialty.bind("<<ComboboxSelected>>", self.update_doctors) # При выборе специальности обновляем врачей
+
+        self.label_doctor.grid(row=2, column=0, padx=10, pady=10, sticky="w")
+        self.combobox_doctor.grid(row=2, column=1, padx=10, pady=10, sticky="we")
+
+        self.label_date.grid(row=3, column=0, padx=10, pady=10, sticky="w")
+        self.entry_date.grid(row=3, column=1, padx=10, pady=10, sticky="we")
+        self.entry_date.insert(0, "ДД.ММ.ГГГГ") # Подсказка
+        self.entry_date.config(foreground="grey")
+        self.entry_date.bind("<FocusIn>", self.on_date_focus_in)
+        self.entry_date.bind("<FocusOut>", self.on_date_focus_out)
+
+
+        self.label_time.grid(row=4, column=0, padx=10, pady=10, sticky="w")
+        self.entry_time.grid(row=4, column=1, padx=10, pady=10, sticky="we")
+        self.entry_time.insert(0, "ЧЧ:ММ") # Подсказка
+        self.entry_time.config(foreground="grey")
+        self.entry_time.bind("<FocusIn>", self.on_time_focus_in)
+        self.entry_time.bind("<FocusOut>", self.on_time_focus_out)
+
+
+        # --- Кнопка записи ---
+        self.record_button = ttk.Button(form_frame, text="Записаться", command=self.record_appointment, style="TButton")
+        self.record_button.grid(row=5, column=0, columnspan=2, pady=20)
+
+        # --- Фрейм для отображения списка записей ---
+        list_frame = ttk.Frame(master, padding="20", style="TFrame")
+        list_frame.grid(row=2, column=0, columnspan=3, padx=20, pady=20, sticky="nsew")
+
+        self.list_label = ttk.Label(list_frame, text="Список приемов:", font=("Arial", 16, "bold"), background="#e0f7fa", foreground="#00796b")
+        self.list_label.pack(pady=10)
+
+        # --- Таблица для отображения записей ---
+        self.tree = ttk.Treeview(list_frame, columns=("Name", "Specialty", "Doctor", "Date", "Time"), show="headings")
+        self.tree.heading("Name", text="ФИО")
+        self.tree.heading("Specialty", text="Специальность")
+        self.tree.heading("Doctor", text="Врач")
+        self.tree.heading("Date", text="Дата")
+        self.tree.heading("Time", text="Время")
+
+        # Настройка ширины колонок
+        self.tree.column("Name", width=200, anchor="w")
+        self.tree.column("Specialty", width=150, anchor="w")
+        self.tree.column("Doctor", width=150, anchor="w")
+        self.tree.column("Date", width=100, anchor="center")
+        self.tree.column("Time", width=80, anchor="center")
+
+        self.tree.pack(fill="both", expand=True)
+
+        # --- Меню ---
+        menubar = tk.Menu(master)
+        master.config(menu=menubar)
+
+        filemenu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Файл", menu=filemenu)
+        filemenu.add_command(label="Новая запись", command=self.clear_form)
+        filemenu.add_command(label="Выход", command=master.quit)
+
+        helpmenu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Справка", menu=helpmenu)
+        helpmenu.add_command(label="О программе", command=self.show_about)
+
+        # --- Инициализация данных ---
+        self.appointments = []
+        self.doctors_data = {
+            "Терапевт": ["Иванов И.И.", "Петрова Е.Н.", "Сидоров А.В."],
+            "Кардиолог": ["Смирнов О.П.", "Кузнецова М.А."],
+            "Невролог": ["Волков Д.С.", "Лебедева А.К."],
+            "Офтальмолог": ["Соколов В.П.", "Морозова И.Р."],
+            "Стоматолог": ["Ершов К.В.", "Гусева С.Н."],
+            "Хирург": ["Федоров Н.А.", "Белова Л.И."]
+        }
+        self.update_doctors() # Заполняем изначально
+
+
+    def update_doctors(self, event=None):
+        """Обновляет список врачей в комбобоксе в зависимости от выбранной специальности."""
+        selected_specialty = self.combobox_specialty.get()
+        if selected_specialty in self.doctors_data:
+            self.doctors = self.doctors_data[selected_specialty]
+            self.combobox_doctor.config(values=self.doctors)
+            if self.doctors:
+                self.combobox_doctor.set(self.doctors[0]) # Выбираем первого врача по умолчанию
+            else:
+                self.combobox_doctor.set("")
+        else:
+            self.combobox_doctor.config(values=[])
+            self.combobox_doctor.set("")
+
+
+    def record_appointment(self):
+        """Собирает данные из формы и добавляет запись в список."""
+        name = self.entry_name.get().strip()
+        specialty = self.combobox_specialty.get()
+        doctor = self.combobox_doctor.get()
+        date = self.entry_date.get().strip()
+        time = self.entry_time.get().strip()
+
+        if not name or not specialty or not doctor or not date or date == "ДД.ММ.ГГГГ" or not time or time == "ЧЧ:ММ":
+            messagebox.showwarning("Ошибка ввода", "Пожалуйста, заполните все поля.")
+            return
+
+        # Простая валидация даты и времени (можно добавить более сложную)
+        if not self.is_valid_date(date):
+            messagebox.showwarning("Ошибка ввода", "Некорректный формат даты. Используйте ДД.ММ.ГГГГ.")
+            return
+        if not self.is_valid_time(time):
+            messagebox.showwarning("Ошибка ввода", "Некорректный формат времени. Используйте ЧЧ:ММ.")
+            return
+
+        appointment_data = {
+            "Name": name,
+            "Specialty": specialty,
+            "Doctor": doctor,
+            "Date": date,
+            "Time": time
+        }
+        self.appointments.append(appointment_data)
+        self.update_appointments_list()
+        self.clear_form()
+        messagebox.showinfo("Успех", "Вы успешно записались на прием!")
+
+    def update_appointments_list(self):
+        """Обновляет отображение списка записей в таблице."""
+        # Очищаем старые записи
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+
+        # Добавляем новые записи
+        for appt in self.appointments:
+            self.tree.insert("", tk.END, values=(appt["Name"], appt["Specialty"], appt["Doctor"], appt["Date"], appt["Time"]))
+
+    def clear_form(self):
+        """Очищает поля формы."""
+        self.entry_name.delete(0, tk.END)
+        self.combobox_specialty.current(0)
+        self.update_doctors()
+        self.entry_date.delete(0, tk.END)
+        self.entry_date.insert(0, "ДД.ММ.ГГГГ")
+        self.entry_date.config(foreground="grey")
+        self.entry_time.delete(0, tk.END)
+        self.entry_time.insert(0, "ЧЧ:ММ")
+        self.entry_time.config(foreground="grey")
+
+    def on_date_focus_in(self, event):
+        """Обработчик фокуса для поля даты."""
+        if self.entry_date.get() == "ДД.ММ.ГГГГ":
+            self.entry_date.delete(0, tk.END)
+            self.entry_date.config(foreground="black")
+
+    def on_date_focus_out(self, event):
+        """Обработчик потери фокуса для поля даты."""
+        if not self.entry_date.get():
+            self.entry_date.insert(0, "ДД.ММ.ГГГГ")
+            self.entry_date.config(foreground="grey")
+
+    def on_time_focus_in(self, event):
+        """Обработчик фокуса для поля времени."""
+        if self.entry_time.get() == "ЧЧ:ММ":
+            self.entry_time.delete(0, tk.END)
+            self.entry_time.config(foreground="black")
+
+    def on_time_focus_out(self, event):
+        """Обработчик потери фокуса для поля времени."""
+        if not self.entry_time.get():
+            self.entry_time.insert(0, "ЧЧ:ММ")
+            self.entry_time.config(foreground="grey")
+
+    def is_valid_date(self, date_str):
+        """Простая проверка формата даты."""
+        try:
+            from datetime import datetime
+            datetime.strptime(date_str, "%d.%m.%Y")
+            return True
+        except ValueError:
+            return False
+
+    def is_valid_time(self, time_str):
+        """Простая проверка формата времени."""
+        try:
+            from datetime import datetime
+            datetime.strptime(time_str, "%H:%M")
+            return True
+        except ValueError:
+            return False
+
+    def show_about(self):
+        """Показывает окно 'О программе'."""
+        messagebox.showinfo("О программе", "Интерфейс поликлиники\n\nРазработано с помощью Python и Tkinter.")
+
+# --- Запуск приложения ---
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = ClinicInterface(root)
+    root.mainloop()
