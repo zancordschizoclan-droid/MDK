@@ -47,5 +47,3 @@ git remote add origin SSH LINK FROM LOCLAL REPO
 git remote add origin
 git remote -v
 git push
-
-https://github.com/Derubs/defrepo.git
